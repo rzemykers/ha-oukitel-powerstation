@@ -28,6 +28,8 @@ PKG = "custom_components.oukitel_power_station"
 MODULES = [
     "__init__",
     "const",
+    "tsl",
+    "product",
     "protocol",
     "cloud",
     "discovery",
