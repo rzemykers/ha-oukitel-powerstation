@@ -30,7 +30,8 @@
     },
     "select": {
       "output_voltage": { "default": "mdi:sine-wave" },
-      "output_frequency": { "default": "mdi:current-ac" }
+      "output_frequency": { "default": "mdi:current-ac" },
+      "led_mode": { "default": "mdi:flashlight" }
     },
     "number": {
       "ac_charge_limit": { "default": "mdi:battery-charging-high" }
