@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OukitelConfigEntry
+from .const import CONF_ENABLE_CONTROL
 from .entity import OukitelEntity, cleanup_entity_registry
 
 
@@ -37,10 +38,14 @@ async def async_setup_entry(
     entry: OukitelConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up switches."""
+    """Set up switches when control is enabled."""
     coordinator = entry.runtime_data
     manifest = coordinator.manifest
-    descriptions = tuple(desc for desc in SWITCHES if manifest.has_tag(desc.tag))
+    descriptions = (
+        tuple(desc for desc in SWITCHES if manifest.has_tag(desc.tag))
+        if entry.options.get(CONF_ENABLE_CONTROL, False) and coordinator.local_capable
+        else ()
+    )
     cleanup_entity_registry(
         hass,
         entry.entry_id,

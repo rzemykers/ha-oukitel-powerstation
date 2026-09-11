@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OukitelConfigEntry
-from .const import FREQUENCY_OPTIONS, LED_OPTIONS, VOLTAGE_OPTIONS
+from .const import CONF_ENABLE_CONTROL, FREQUENCY_OPTIONS, LED_OPTIONS, VOLTAGE_OPTIONS
 from .entity import OukitelEntity, cleanup_entity_registry
 
 
@@ -49,10 +49,14 @@ async def async_setup_entry(
     entry: OukitelConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up selects."""
+    """Set up selects when control is enabled."""
     coordinator = entry.runtime_data
     manifest = coordinator.manifest
-    descriptions = tuple(desc for desc in SELECTS if manifest.has_tag(desc.tag))
+    descriptions = (
+        tuple(desc for desc in SELECTS if manifest.has_tag(desc.tag))
+        if entry.options.get(CONF_ENABLE_CONTROL, False) and coordinator.local_capable
+        else ()
+    )
     cleanup_entity_registry(
         hass,
         entry.entry_id,

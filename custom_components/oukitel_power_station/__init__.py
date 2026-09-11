@@ -11,13 +11,25 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .cloud import OukitelCloud, OukitelCloudAuthError, OukitelCloudError
-from .const import CONF_EMAIL, CONF_MANIFEST, CONF_PASSWORD, CONF_PK, CONF_REGION
+from .const import (
+    CONF_EMAIL,
+    CONF_ENABLE_CONTROL,
+    CONF_MANIFEST,
+    CONF_PASSWORD,
+    CONF_PK,
+    CONF_REGION,
+)
 from .coordinator import OukitelCoordinator
 from .product import ProductManifest, build_manifest, resolve_manifest
 
 _LOGGER = logging.getLogger(__name__)
 
+# SWITCH/SELECT/NUMBER are forwarded unconditionally; each platform checks the
+# `enable_control` option itself, keeping forward/unload symmetric across an
+# options change.
 PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
     Platform.SENSOR,
     Platform.SWITCH,
     Platform.SELECT,
@@ -56,6 +68,15 @@ async def _async_resolve_manifest(hass: HomeAssistant, entry: ConfigEntry) -> Pr
     if manifest is None:  # pragma: no cover - build_manifest produced the snapshot
         raise ConfigEntryNotReady(f"cannot build product manifest for {pk}")
     return manifest
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Preserve control entities for entries created before the opt-in option."""
+    if entry.version < 2:
+        options = dict(entry.options)
+        options.setdefault(CONF_ENABLE_CONTROL, True)
+        hass.config_entries.async_update_entry(entry, options=options, version=2)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: OukitelConfigEntry) -> bool:

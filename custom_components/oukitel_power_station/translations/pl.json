@@ -46,10 +46,12 @@
       "init": {
         "title": "Opcje",
         "data": {
-          "cloud_poll": "Pobieraj temperaturę i napięcie z chmury"
+          "cloud_poll": "Pobieraj temperaturę i napięcie z chmury",
+          "enable_control": "Włącz sterowanie urządzeniem (przełączniki wyjść, napięcie/częstotliwość, limit ładowania)"
         },
         "data_description": {
-          "cloud_poll": "To urządzenie nie wysyła temperatury ani napięcia wyjściowego po sieci lokalnej. Włącz, aby odpytywać chmurę Quectel co kilka minut (zapisanymi poświadczeniami) i uzupełniać te wartości. Domyślnie wyłączone, aby działanie było w pełni lokalne."
+          "cloud_poll": "To urządzenie nie wysyła temperatury ani napięcia wyjściowego po sieci lokalnej. Włącz, aby odpytywać chmurę Quectel co kilka minut (zapisanymi poświadczeniami) i uzupełniać te wartości. Domyślnie wyłączone, aby działanie było w pełni lokalne.",
+          "enable_control": "Nowe wpisy domyślnie wyłączone (to UPS). Istniejące wpisy zachowują sterowanie włączone. Po włączeniu udostępnia przełączniki wyjść, napięcie/częstotliwość i limit ładowania AC jako encje zapisywalne przez połączenie lokalne."
         }
       }
     }
@@ -90,6 +92,12 @@
     },
     "number": {
       "ac_charge_limit": { "name": "Limit ładowania AC" }
+    },
+    "binary_sensor": {
+      "on_battery": { "name": "Zasilanie z baterii (wnioskowane)" }
+    },
+    "button": {
+      "reload": { "name": "Przeładuj" }
     }
   }
 }

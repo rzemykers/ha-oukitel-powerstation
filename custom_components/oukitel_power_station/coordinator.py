@@ -102,6 +102,11 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         """The product manifest (TSL-derived capability model)."""
         return self._manifest
 
+    @property
+    def local_capable(self) -> bool:
+        """Return whether this entry has a writable local connection."""
+        return True
+
     # --- connection lifecycle ---
     def _handle_report(self, report: dict[int, Any]) -> None:
         _LOGGER.debug("report=%s", report)
