@@ -2,12 +2,30 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
+
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_NAME, DEFAULT_MODEL, DOMAIN, MANUFACTURER
 from .coordinator import OukitelCoordinator
+
+
+def cleanup_entity_registry(
+    hass: HomeAssistant,
+    entry_id: str,
+    platform: Platform,
+    valid_unique_ids: Collection[str],
+) -> None:
+    """Remove entities no longer exposed by this product or configuration."""
+    registry = er.async_get(hass)
+    for registry_entry in er.async_entries_for_config_entry(registry, entry_id):
+        if registry_entry.domain == platform and registry_entry.unique_id not in valid_unique_ids:
+            registry.async_remove(registry_entry.entity_id)
 
 
 class OukitelEntity(CoordinatorEntity[OukitelCoordinator]):
@@ -29,11 +47,13 @@ class OukitelEntity(CoordinatorEntity[OukitelCoordinator]):
         dk = coordinator.dk
         self._attr_unique_id = f"{dk}_{description.key}"
         self._attr_translation_key = description.key
+        manifest = coordinator.manifest
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, dk)},
             name=coordinator.config_entry.data.get(CONF_NAME) or "Oukitel Power Station",
             manufacturer=MANUFACTURER,
-            model=DEFAULT_MODEL,
+            model=manifest.model or DEFAULT_MODEL,
+            model_id=manifest.product_key or None,
             connections={("mac", dk)} if len(dk) == 12 else set(),
         )
 

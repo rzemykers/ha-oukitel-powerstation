@@ -85,7 +85,8 @@
     },
     "select": {
       "output_voltage": { "name": "Output voltage" },
-      "output_frequency": { "name": "Output frequency" }
+      "output_frequency": { "name": "Output frequency" },
+      "led_mode": { "name": "LED mode" }
     },
     "number": {
       "ac_charge_limit": { "name": "AC charge limit" }

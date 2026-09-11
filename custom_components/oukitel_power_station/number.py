@@ -9,12 +9,12 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory
+from homeassistant.const import PERCENTAGE, EntityCategory, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OukitelConfigEntry
-from .entity import OukitelEntity
+from .entity import OukitelEntity, cleanup_entity_registry
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -45,7 +45,15 @@ async def async_setup_entry(
 ) -> None:
     """Set up numbers."""
     coordinator = entry.runtime_data
-    async_add_entities(OukitelNumber(coordinator, desc) for desc in NUMBERS)
+    manifest = coordinator.manifest
+    descriptions = tuple(desc for desc in NUMBERS if manifest.has_tag(desc.tag))
+    cleanup_entity_registry(
+        hass,
+        entry.entry_id,
+        Platform.NUMBER,
+        {f"{coordinator.dk}_{desc.key}" for desc in descriptions},
+    )
+    async_add_entities(OukitelNumber(coordinator, desc) for desc in descriptions)
 
 
 class OukitelNumber(OukitelEntity, NumberEntity):

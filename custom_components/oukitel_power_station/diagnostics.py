@@ -29,6 +29,14 @@ async def async_get_config_entry_diagnostics(
     return {
         "entry_data": async_redact_data(dict(entry.data), TO_REDACT),
         "available": coordinator.last_update_success,
+        "product": {
+            "model": coordinator.manifest.model,
+            "product_key": coordinator.manifest.product_key,
+            "tsl_version": coordinator.manifest.tsl_version,
+            "profile_version": coordinator.manifest.profile_version,
+            "tag_count": len(coordinator.manifest.tags),
+            "excluded_tags": list(coordinator.manifest.excluded_tags),
+        },
         # Connection health: a session that is up and acking writes while
         # last_report_age_s keeps climbing means the station has stopped streaming.
         "connection": coordinator.connection_diagnostics(),

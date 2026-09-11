@@ -85,7 +85,8 @@
     },
     "select": {
       "output_voltage": { "name": "Napięcie wyjściowe" },
-      "output_frequency": { "name": "Częstotliwość wyjściowa" }
+      "output_frequency": { "name": "Częstotliwość wyjściowa" },
+      "led_mode": { "name": "Tryb lampy LED" }
     },
     "number": {
       "ac_charge_limit": { "name": "Limit ładowania AC" }
