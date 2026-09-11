@@ -36,6 +36,8 @@ MODULES = [
     "coordinator",
     "entity",
     "config_flow",
+    "binary_sensor",
+    "button",
     "sensor",
     "switch",
     "select",

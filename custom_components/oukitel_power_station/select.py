@@ -5,13 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.const import EntityCategory
+from homeassistant.const import EntityCategory, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OukitelConfigEntry
-from .const import FREQUENCY_OPTIONS, VOLTAGE_OPTIONS
-from .entity import OukitelEntity
+from .const import CONF_ENABLE_CONTROL, FREQUENCY_OPTIONS, LED_OPTIONS, VOLTAGE_OPTIONS
+from .entity import OukitelEntity, cleanup_entity_registry
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -35,6 +35,12 @@ SELECTS: tuple[OukitelSelectDescription, ...] = (
         value_map=FREQUENCY_OPTIONS,
         entity_category=EntityCategory.CONFIG,
     ),
+    OukitelSelectDescription(
+        key="led_mode",
+        tag=10,
+        value_map=LED_OPTIONS,
+        entity_category=EntityCategory.CONFIG,
+    ),
 )
 
 
@@ -43,9 +49,21 @@ async def async_setup_entry(
     entry: OukitelConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up selects."""
+    """Set up selects when control is enabled."""
     coordinator = entry.runtime_data
-    async_add_entities(OukitelSelect(coordinator, desc) for desc in SELECTS)
+    manifest = coordinator.manifest
+    descriptions = (
+        tuple(desc for desc in SELECTS if manifest.has_tag(desc.tag))
+        if entry.options.get(CONF_ENABLE_CONTROL, False) and coordinator.local_capable
+        else ()
+    )
+    cleanup_entity_registry(
+        hass,
+        entry.entry_id,
+        Platform.SELECT,
+        {f"{coordinator.dk}_{desc.key}" for desc in descriptions},
+    )
+    async_add_entities(OukitelSelect(coordinator, desc) for desc in descriptions)
 
 
 class OukitelSelect(OukitelEntity, SelectEntity):

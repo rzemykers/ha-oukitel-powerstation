@@ -46,10 +46,12 @@
       "init": {
         "title": "Options",
         "data": {
-          "cloud_poll": "Fetch temperature & voltage from the cloud"
+          "cloud_poll": "Fetch temperature & voltage from the cloud",
+          "enable_control": "Enable device control (output switches, voltage/frequency, charge limit)"
         },
         "data_description": {
-          "cloud_poll": "This device does not send temperature or output voltage over the local network. Enable this to poll the Quectel cloud every few minutes (using your stored credentials) to fill them in. Off by default to keep operation fully local."
+          "cloud_poll": "This device does not send temperature or output voltage over the local network. Enable this to poll the Quectel cloud every few minutes (using your stored credentials) to fill them in. Off by default to keep operation fully local.",
+          "enable_control": "New entries default to off because this is a UPS. Existing entries keep control enabled. When on, exposes the output switches, output voltage/frequency and the AC charge limit as writable entities over the local link."
         }
       }
     }
@@ -85,10 +87,17 @@
     },
     "select": {
       "output_voltage": { "name": "Output voltage" },
-      "output_frequency": { "name": "Output frequency" }
+      "output_frequency": { "name": "Output frequency" },
+      "led_mode": { "name": "LED mode" }
     },
     "number": {
       "ac_charge_limit": { "name": "AC charge limit" }
+    },
+    "binary_sensor": {
+      "on_battery": { "name": "Battery-powered (inferred)" }
+    },
+    "button": {
+      "reload": { "name": "Reload" }
     }
   }
 }

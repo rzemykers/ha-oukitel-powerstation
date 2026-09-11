@@ -22,7 +22,9 @@ from .const import (
     CONF_CLOUD_POLL,
     CONF_DK,
     CONF_EMAIL,
+    CONF_ENABLE_CONTROL,
     CONF_HOST,
+    CONF_MANIFEST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PK,
@@ -32,20 +34,37 @@ from .const import (
     REGIONS,
 )
 from .discovery import async_discover
+from .product import build_manifest
 from .protocol import OukitelAuthError, OukitelConnection, OukitelError
 
 _LOGGER = logging.getLogger(__name__)
 
 
+def _device_label(device: dict[str, Any]) -> str:
+    """Human label for the picker: deviceName plus the product name."""
+    name = str(device.get("deviceName") or device["deviceKey"])
+    product = str(device.get("productName") or device.get("productKey") or "")
+    return f"{name} ({product})" if product and product not in name else name
+
+
 class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
     """Cloud login → pick device → locate on LAN → validate."""
 
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self) -> None:
         self._creds: dict[str, str] = {}
         self._devices: list[dict[str, Any]] = []
         self._device: dict[str, Any] = {}
+        self._cloud: OukitelCloud | None = None
+
+    async def _async_get_cloud(self) -> OukitelCloud:
+        """Return the authenticated client created during the login step."""
+        if self._cloud is None:
+            cloud = OukitelCloud(async_get_clientsession(self.hass), self._creds[CONF_REGION])
+            await cloud.login(self._creds[CONF_EMAIL], self._creds[CONF_PASSWORD])
+            self._cloud = cloud
+        return self._cloud
 
     @staticmethod
     @callback
@@ -69,6 +88,7 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
                 if not self._devices:
                     errors["base"] = "no_devices"
                 else:
+                    self._cloud = cloud
                     self._creds = {
                         CONF_REGION: user_input[CONF_REGION],
                         CONF_EMAIL: user_input[CONF_EMAIL],
@@ -96,7 +116,7 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
             self._device = next(d for d in self._devices if d["deviceKey"] == dk)
             return await self.async_step_locate()
 
-        options = {d["deviceKey"]: f"{d.get('deviceName', d['deviceKey'])}" for d in self._devices}
+        options = {d["deviceKey"]: _device_label(d) for d in self._devices}
         schema = vol.Schema({vol.Required(CONF_DK): vol.In(options)})
         return self.async_show_form(step_id="device", data_schema=schema)
 
@@ -131,9 +151,7 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
             # regenerateAuthKey returns the live one (deterministic — verified
             # live on a shared P1500: repeated calls return the same value).
             try:
-                session = async_get_clientsession(self.hass)
-                cloud = OukitelCloud(session, self._creds[CONF_REGION])
-                await cloud.login(self._creds[CONF_EMAIL], self._creds[CONF_PASSWORD])
+                cloud = await self._async_get_cloud()
                 auth_key = await cloud.regenerate_auth_key(
                     self._device["productKey"], self._device["deviceKey"]
                 )
@@ -161,6 +179,16 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
                 data_schema=vol.Schema({vol.Required(CONF_HOST): str}),
                 errors=errors,
             )
+        # Capture the product thing-model so the runtime never needs the cloud
+        # to know the model's entities (bundled TSL is the offline fallback).
+        manifest: dict[str, Any] = {}
+        try:
+            cloud = await self._async_get_cloud()
+            tsl = await cloud.get_tsl(self._device["productKey"])
+        except OukitelCloudError as err:
+            _LOGGER.debug("productTSL fetch failed (bundled fallback): %s", err)
+        else:
+            manifest = build_manifest(tsl).to_dict()
         return self.async_create_entry(
             title=self._device.get("deviceName") or self._device["deviceKey"],
             data={
@@ -170,6 +198,7 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_AUTH_KEY: auth_key,
                 CONF_HOST: host,
                 CONF_NAME: self._device.get("deviceName"),
+                CONF_MANIFEST: manifest,
             },
         )
 
@@ -215,11 +244,18 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class OukitelOptionsFlow(OptionsFlow):
-    """Options: opt in to fetching cloud-only values (temperature, voltage)."""
+    """Options: opt in to cloud-only values; opt in to local control."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             return self.async_create_entry(data=user_input)
-        current = self.config_entry.options.get(CONF_CLOUD_POLL, False)
-        schema = vol.Schema({vol.Required(CONF_CLOUD_POLL, default=current): bool})
+        options = self.config_entry.options
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_CLOUD_POLL, default=options.get(CONF_CLOUD_POLL, False)): bool,
+                vol.Required(
+                    CONF_ENABLE_CONTROL, default=options.get(CONF_ENABLE_CONTROL, False)
+                ): bool,
+            }
+        )
         return self.async_show_form(step_id="init", data_schema=schema)
