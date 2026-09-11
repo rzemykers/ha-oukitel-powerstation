@@ -29,6 +29,16 @@
         "data": {
           "password": "Hasło"
         }
+      },
+      "connect_mode": {
+        "title": "Tryb połączenia",
+        "description": "Stacji nie znaleziono przez UDP (HA i stacja muszą być w tej samej sieci). Podaj IP ręcznie lub monitoruj tylko przez chmurę: dane z cienia chmurowego, bez sterowania lokalnego.",
+        "data": {
+          "mode": "Tryb połączenia"
+        },
+        "data_description": {
+          "mode": "Wybierz, czy podać lokalny adres IP, czy używać monitorowania tylko przez chmurę (tylko do odczytu)."
+        }
       }
     },
     "error": {
@@ -47,11 +57,13 @@
         "title": "Opcje",
         "data": {
           "cloud_poll": "Pobieraj temperaturę i napięcie z chmury",
-          "enable_control": "Włącz sterowanie urządzeniem (przełączniki wyjść, napięcie/częstotliwość, limit ładowania)"
+          "enable_control": "Włącz sterowanie urządzeniem (przełączniki wyjść, napięcie/częstotliwość, limit ładowania)",
+          "cloud_poll_interval": "Interwał odpytywania chmury (sekundy)"
         },
         "data_description": {
           "cloud_poll": "To urządzenie nie wysyła temperatury ani napięcia wyjściowego po sieci lokalnej. Włącz, aby odpytywać chmurę Quectel co kilka minut (zapisanymi poświadczeniami) i uzupełniać te wartości. Domyślnie wyłączone, aby działanie było w pełni lokalne.",
-          "enable_control": "Nowe wpisy domyślnie wyłączone (to UPS). Istniejące wpisy zachowują sterowanie włączone. Po włączeniu udostępnia przełączniki wyjść, napięcie/częstotliwość i limit ładowania AC jako encje zapisywalne przez połączenie lokalne."
+          "enable_control": "Nowe wpisy domyślnie wyłączone (to UPS). Istniejące wpisy zachowują sterowanie włączone. Po włączeniu udostępnia przełączniki wyjść, napięcie/częstotliwość i limit ładowania AC jako encje zapisywalne przez połączenie lokalne.",
+          "cloud_poll_interval": "Jak często odświeżać dane z cienia chmurowego (60-3600 s). Świeżość danych jest ograniczona tym, jak często stacja sama raportuje do chmury."
         }
       }
     }
@@ -98,6 +110,14 @@
     },
     "button": {
       "reload": { "name": "Przeładuj" }
+    }
+  },
+  "selector": {
+    "connect_mode": {
+      "options": {
+        "manual": "Podaj lokalny adres IP",
+        "cloud_only": "Monitorowanie tylko przez chmurę (tylko do odczytu)"
+      }
     }
   }
 }

@@ -12,14 +12,20 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
+from homeassistant.const import UnitOfTime
 from homeassistant.core import callback
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import voluptuous as vol
 
 from .cloud import OukitelCloud, OukitelCloudAuthError, OukitelCloudError
 from .const import (
+    CLOUD_POLL_INTERVAL_MAX_S,
+    CLOUD_POLL_INTERVAL_MIN_S,
+    CLOUD_POLL_INTERVAL_S,
     CONF_AUTH_KEY,
     CONF_CLOUD_POLL,
+    CONF_CLOUD_POLL_INTERVAL,
     CONF_DK,
     CONF_EMAIL,
     CONF_ENABLE_CONTROL,
@@ -45,6 +51,20 @@ def _device_label(device: dict[str, Any]) -> str:
     name = str(device.get("deviceName") or device["deviceKey"])
     product = str(device.get("productName") or device.get("productKey") or "")
     return f"{name} ({product})" if product and product not in name else name
+
+
+def _connect_mode_schema() -> vol.Schema:
+    """Return the translated local/cloud-only connection selector."""
+    return vol.Schema(
+        {
+            vol.Required("mode", default="manual"): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["manual", "cloud_only"],
+                    translation_key="connect_mode",
+                )
+            )
+        }
+    )
 
 
 class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -128,7 +148,17 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
         host = await async_discover(dk)
         if host:
             return await self._validate_and_create(host)
-        return await self.async_step_manual()
+        return await self.async_step_connect_mode()
+
+    async def async_step_connect_mode(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """The station was not discovered — manual IP, or cloud-only."""
+        if user_input is not None:
+            if user_input["mode"] == "manual":
+                return await self.async_step_manual()
+            return await self._validate_and_create(host=None)
+        return self.async_show_form(step_id="connect_mode", data_schema=_connect_mode_schema())
 
     async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
@@ -139,56 +169,78 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def _validate_and_create(
-        self, host: str, errors: dict[str, str] | None = None
+        self, host: str | None, errors: dict[str, str] | None = None
     ) -> ConfigFlowResult:
         errors = errors if errors is not None else {}
         auth_key = self._device["authKey"]
-        conn = OukitelConnection(host, auth_key)
-        try:
-            await conn.connect()
-        except OukitelAuthError:
-            # Shared accounts serve a binding-time-frozen key in userDeviceList;
-            # regenerateAuthKey returns the live one (deterministic — verified
-            # live on a shared P1500: repeated calls return the same value).
+        if host is not None:
+            conn = OukitelConnection(host, auth_key)
             try:
-                cloud = await self._async_get_cloud()
-                auth_key = await cloud.regenerate_auth_key(
-                    self._device["productKey"], self._device["deviceKey"]
-                )
-            except OukitelCloudAuthError:
-                errors["base"] = "invalid_auth"
-            except OukitelCloudError:
-                errors["base"] = "cannot_connect"
-            else:
-                conn = OukitelConnection(host, auth_key)
+                await conn.connect()
+            except OukitelAuthError:
+                # Shared accounts serve a binding-time-frozen key in userDeviceList;
+                # regenerateAuthKey returns the current key used by the station.
                 try:
-                    await conn.connect()
-                except OukitelAuthError:
+                    cloud = await self._async_get_cloud()
+                    auth_key = await cloud.regenerate_auth_key(
+                        self._device["productKey"], self._device["deviceKey"]
+                    )
+                except OukitelCloudAuthError:
                     errors["base"] = "invalid_auth"
-                except OukitelError:
+                except OukitelCloudError:
                     errors["base"] = "cannot_connect"
-                finally:
-                    await conn.close()
-        except OukitelError:
-            errors["base"] = "cannot_connect"
-        finally:
-            await conn.close()
+                else:
+                    conn = OukitelConnection(host, auth_key)
+                    try:
+                        await conn.connect()
+                    except OukitelAuthError:
+                        errors["base"] = "invalid_auth"
+                    except OukitelError:
+                        errors["base"] = "cannot_connect"
+                    finally:
+                        await conn.close()
+            except OukitelError:
+                errors["base"] = "cannot_connect"
+            finally:
+                await conn.close()
         if errors:
             return self.async_show_form(
                 step_id="manual",
                 data_schema=vol.Schema({vol.Required(CONF_HOST): str}),
                 errors=errors,
             )
-        # Capture the product thing-model so the runtime never needs the cloud
-        # to know the model's entities (bundled TSL is the offline fallback).
+
+        # Capture the thing-model for both connection modes. Cloud-only setup
+        # additionally reads the shadow once to validate device access.
         manifest: dict[str, Any] = {}
         try:
             cloud = await self._async_get_cloud()
             tsl = await cloud.get_tsl(self._device["productKey"])
+            vendor_manifest = build_manifest(tsl)
+            if not vendor_manifest.tags:
+                raise OukitelCloudError("productTSL returned no properties")
+            if host is None:
+                await cloud.get_business_attributes(
+                    self._device["productKey"], self._device["deviceKey"]
+                )
+        except OukitelCloudAuthError as err:
+            if host is None:
+                return self.async_show_form(
+                    step_id="connect_mode",
+                    data_schema=_connect_mode_schema(),
+                    errors={"base": "invalid_auth"},
+                )
+            _LOGGER.debug("productTSL fetch failed (bundled fallback): %s", err)
         except OukitelCloudError as err:
+            if host is None:
+                return self.async_show_form(
+                    step_id="connect_mode",
+                    data_schema=_connect_mode_schema(),
+                    errors={"base": "cannot_connect"},
+                )
             _LOGGER.debug("productTSL fetch failed (bundled fallback): %s", err)
         else:
-            manifest = build_manifest(tsl).to_dict()
+            manifest = vendor_manifest.to_dict()
         return self.async_create_entry(
             title=self._device.get("deviceName") or self._device["deviceKey"],
             data={
@@ -244,18 +296,38 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class OukitelOptionsFlow(OptionsFlow):
-    """Options: opt in to cloud-only values; opt in to local control."""
+    """Options: cloud poll + control (local stations) / poll interval (cloud-only)."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             return self.async_create_entry(data=user_input)
         options = self.config_entry.options
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_CLOUD_POLL, default=options.get(CONF_CLOUD_POLL, False)): bool,
-                vol.Required(
-                    CONF_ENABLE_CONTROL, default=options.get(CONF_ENABLE_CONTROL, False)
-                ): bool,
-            }
-        )
+        if self.config_entry.data.get(CONF_HOST):
+            schema = vol.Schema(
+                {
+                    vol.Required(
+                        CONF_CLOUD_POLL, default=options.get(CONF_CLOUD_POLL, False)
+                    ): bool,
+                    vol.Required(
+                        CONF_ENABLE_CONTROL, default=options.get(CONF_ENABLE_CONTROL, False)
+                    ): bool,
+                }
+            )
+        else:
+            schema = vol.Schema(
+                {
+                    vol.Required(
+                        CONF_CLOUD_POLL_INTERVAL,
+                        default=options.get(CONF_CLOUD_POLL_INTERVAL, CLOUD_POLL_INTERVAL_S),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=CLOUD_POLL_INTERVAL_MIN_S,
+                            max=CLOUD_POLL_INTERVAL_MAX_S,
+                            step=60,
+                            mode=selector.NumberSelectorMode.BOX,
+                            unit_of_measurement=UnitOfTime.SECONDS,
+                        )
+                    )
+                }
+            )
         return self.async_show_form(step_id="init", data_schema=schema)
