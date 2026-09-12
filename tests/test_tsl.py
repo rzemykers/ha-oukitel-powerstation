@@ -97,10 +97,10 @@ def test_parse_scalars_and_enums(p1500_tsl):
 def test_parse_structs(p1500_tsl, p2001e_tsl):
     p1500 = parse_tsl(p1500_tsl)["tags"]
     p2001e = parse_tsl(p2001e_tsl)["tags"]
-    # P1500: 2 Type-C ports; P2001E Plus: 4 (verified TSL diff).
+    # P1500E Plus: 2 Type-C ports; P2001E Plus: 4 (verified TSL diff).
     assert sorted(p1500[TAG_TYPEC_STRUCT]["struct"]) == [2, 5]
     assert sorted(p2001e[TAG_TYPEC_STRUCT]["struct"]) == [2, 5, 6, 7]
-    # P2001E Plus structs mirror the output switches as subtag 1; P1500 not.
+    # P2001E Plus structs mirror the output switches as subtag 1; P1500E Plus not.
     assert 1 in p2001e[TAG_AC_STRUCT]["struct"]
     assert 1 not in p1500[TAG_AC_STRUCT]["struct"]
     assert p1500[TAG_AC_STRUCT]["struct"][2]["unit"] == "W"
@@ -139,7 +139,7 @@ def test_build_manifest_known_products(p1500_tsl, p2001e_tsl):
     m1500 = resolve_manifest("p11uve", cloud_tsl=p1500_tsl)
     assert m1500 is not None
     assert m1500.product_key == "p11uve"
-    assert m1500.model == "P1500"
+    assert m1500.model == "P1500E Plus"
     assert m1500.excluded_tags == (TAG_REMAIN_TIME, TAG_REMAIN_CHARGING_TIME)
 
     m2001e = resolve_manifest("p11wN7", cloud_tsl=p2001e_tsl)
@@ -162,10 +162,10 @@ def test_manifest_gating(p1500_tsl, p2001e_tsl):
     m2001e = resolve_manifest("p11wN7", cloud_tsl=p2001e_tsl)
     assert m1500 is not None
     assert m2001e is not None
-    # P1500 has LED, no USB switch; P2001E Plus has USB switch, no LED.
+    # P1500E Plus has LED, no USB switch; P2001E Plus has USB switch, no LED.
     assert m1500.has_tag(TAG_LED_STATUS) and not m1500.has_tag(TAG_USB_SWITCH)
     assert m2001e.has_tag(TAG_USB_SWITCH) and not m2001e.has_tag(TAG_LED_STATUS)
-    # curated exclude: the pinned time sensors vanish on the P1500 only.
+    # curated exclude: the pinned time sensors vanish on the P1500E Plus only.
     assert not m1500.has_tag(TAG_REMAIN_TIME)
     assert not m1500.has_tag(TAG_REMAIN_CHARGING_TIME)
     assert m2001e.has_tag(TAG_REMAIN_TIME)
@@ -219,12 +219,12 @@ def test_resolve_manifest_priority(p1500_tsl):
     resolved = resolve_manifest("p11uve", snapshot=fake)
     assert resolved is not None
     assert resolved.tsl_version == "snapshotted"
-    assert resolved.model == "P1500"
+    assert resolved.model == "P1500E Plus"
     assert resolved.excluded_tags == (TAG_REMAIN_TIME, TAG_REMAIN_CHARGING_TIME)
     # bundled as fallback
     resolved = resolve_manifest("p11uve")
     assert resolved is not None
-    assert resolved.model == "P1500"
+    assert resolved.model == "P1500E Plus"
     assert resolved.tags == bundled.tags
     # cloud data as the last resort for an unknown product key
     resolved = resolve_manifest("pkNew", cloud_tsl=p1500_tsl)

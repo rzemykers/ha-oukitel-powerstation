@@ -1,7 +1,7 @@
 """Product capabilities exposed by a WonderFree power station.
 
 The manifest is the ONLY place model knowledge lives. Platforms never ask
-"is this a P1500?" — they ask the manifest "does this tag (or struct subtag)
+"is this a P1500E Plus?" — they ask the manifest "does this tag (or struct subtag)
 exist on this product?" and the coordinator asks it for the read list and
 the cloud shadow key map. Adding a new model = adding its productTSL
 snapshot under ``tsl/`` (and, when needed, a curated override entry).
@@ -18,7 +18,7 @@ Sources of truth, in resolver priority order:
 
 Curated overrides (``KNOWN_PRODUCTS``) are applied after resolving a source.
 They record verified firmware behaviour the TSL itself does not express —
-e.g. the P1500 pins remain_time (2) and
+e.g. the P1500E Plus pins remain_time (2) and
 remain_charging_time (3) to 5940, so those sensors are excluded there
 (verified live 2026-09-06) while the P2001E Plus reports them correctly.
 
@@ -45,7 +45,7 @@ _TSL_DIR = Path(__file__).parent / "tsl"
 # productName from userDeviceList wins when it is available.
 KNOWN_PRODUCTS: dict[str, dict[str, Any]] = {
     "p11uve": {
-        "model": "P1500",
+        "model": "P1500E Plus",
         # Pinned to 5940 by this firmware (verified live) — useless sensors.
         "excluded_tags": (2, 3),
     },
