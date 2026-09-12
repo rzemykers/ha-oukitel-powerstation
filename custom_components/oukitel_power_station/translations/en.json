@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Oukitel cloud login",
-        "description": "Sign in with your WonderFree / Oukitel account. Used once to fetch the device key; control is local afterwards.",
+        "description": "Sign in with your WonderFree / Oukitel account. Credentials are used to fetch the device key and product information; runtime can use a local connection or read-only cloud monitoring.",
         "data": {
           "region": "Region",
           "email": "Email",
@@ -29,6 +29,16 @@
         "data": {
           "password": "Password"
         }
+      },
+      "connect_mode": {
+        "title": "Connection mode",
+        "description": "The station was not found by UDP discovery (it and Home Assistant must be on the same network). Enter its IP manually, or monitor it cloud-only: data via the cloud shadow, no local control.",
+        "data": {
+          "mode": "Connection mode"
+        },
+        "data_description": {
+          "mode": "Choose whether to enter a local IP address or use read-only cloud monitoring."
+        }
       }
     },
     "error": {
@@ -47,11 +57,13 @@
         "title": "Options",
         "data": {
           "cloud_poll": "Fetch temperature & voltage from the cloud",
-          "enable_control": "Enable device control (output switches, voltage/frequency, charge limit)"
+          "enable_control": "Enable device control (output switches, voltage/frequency, charge limit)",
+          "cloud_poll_interval": "Cloud poll interval (seconds)"
         },
         "data_description": {
           "cloud_poll": "This device does not send temperature or output voltage over the local network. Enable this to poll the Quectel cloud every few minutes (using your stored credentials) to fill them in. Off by default to keep operation fully local.",
-          "enable_control": "New entries default to off because this is a UPS. Existing entries keep control enabled. When on, exposes the output switches, output voltage/frequency and the AC charge limit as writable entities over the local link."
+          "enable_control": "New entries default to off because this is a UPS. Existing entries keep control enabled. When on, exposes the output switches, output voltage/frequency and the AC charge limit as writable entities over the local link.",
+          "cloud_poll_interval": "How often to refresh data from the cloud shadow (60-3600 s). Data freshness is bounded by how often the station itself reports to the cloud."
         }
       }
     }
@@ -98,6 +110,14 @@
     },
     "button": {
       "reload": { "name": "Reload" }
+    }
+  },
+  "selector": {
+    "connect_mode": {
+      "options": {
+        "manual": "Enter a local IP address",
+        "cloud_only": "Cloud-only monitoring (read-only)"
+      }
     }
   }
 }
