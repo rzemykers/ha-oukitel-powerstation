@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.4.0...v0.5.0) (2026-09-12)
+
+
+### Features
+
+* battery-powered binary sensor, reload button, opt-in control ([6637505](https://github.com/bordeux/ha-oukitel-powerstation/commit/66375052dabede7342f277f2e37b2455b3d08c2c))
+* battery-powered binary sensor, reload button, opt-in control ([b58a0ed](https://github.com/bordeux/ha-oukitel-powerstation/commit/b58a0ed181fccbc8aac8713ea21ad5ff40c85529))
+* cloud-only stations (monitor a station with no LAN reach) ([96ef447](https://github.com/bordeux/ha-oukitel-powerstation/commit/96ef447762d73f8aad6de7d48bb249dc0b84144d))
+* cloud-only stations (monitor a station with no LAN reach) ([6804e2f](https://github.com/bordeux/ha-oukitel-powerstation/commit/6804e2f19a7e1debb416a80233c4e8e3d2fc946c))
+* product manifest layer (TSL-driven entities foundation) ([24e856b](https://github.com/bordeux/ha-oukitel-powerstation/commit/24e856bc0deefb87eda62abc90f5f7e31e763250))
+* product manifest layer (TSL-driven entities foundation) ([0326935](https://github.com/bordeux/ha-oukitel-powerstation/commit/0326935974569cf4491ef9323b673388d1db7f7e))
+* support the OUKITEL P1500 via manifest-gated entities ([6c4e085](https://github.com/bordeux/ha-oukitel-powerstation/commit/6c4e0853862cc1b73d9675b0d7994dbc9585f4ff))
+* support the OUKITEL P1500 via manifest-gated entities ([2e9fecd](https://github.com/bordeux/ha-oukitel-powerstation/commit/2e9fecd376ac4a930e2440e8fd8b322a8bc43b30))
+
 ## [0.4.0](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.4...v0.4.0) (2026-09-08)
 
 
